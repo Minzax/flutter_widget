@@ -35,6 +35,12 @@ class MopTextField extends StatefulWidget {
 
   final int minLines;
 
+  /// 键盘输入框颜色
+  final Color bgColor;
+
+  // 键盘输入框 标题
+  final String label;
+
   final InputDecoration decoration;
 
   /// 聚焦事件
@@ -59,6 +65,8 @@ class MopTextField extends StatefulWidget {
     this.decoration,
     this.onFocus,
     this.onBlur,
+    this.label,
+    this.bgColor,
   });
 
   @override
@@ -69,50 +77,108 @@ class _State extends State<MopTextField> {
   bool obscureText = false;
   bool focusEn = false;
   bool showText = true;
-  FocusNode focusNode = FocusNode();
 
-  bool showMask = false;
+  TextEditingController _controller = TextEditingController();
 
-  @override
-  void initState() {
-    /// 焦点侦听事件
-    focusNode.addListener(() {
-      /// 聚焦状态
-      if(focusNode.hasFocus) {
-        if(widget.onFocus != null) widget.onFocus();
-        setState(() {
-          showMask = true;
-        });
-      } else {
-        if(widget.onBlur != null) widget.onBlur();
-      }
-    });
-    super.initState();
-  }
+  Widget _buildMaterialDialogTransitions(BuildContext context, Animation<double> animation, Animation<double> secondaryAnimation, Widget child) {
+  return FadeTransition(
+    opacity: CurvedAnimation(
+      parent: animation,
+      curve: Curves.easeOut,
+    ),
+    child: child,
+  );
+}
 
-  @override
-  void dispose() {
-    focusNode.dispose();
-    focusNode = null;
-    super.dispose();
+  void inputDialog(){
+    showGeneralDialog(
+      context: context,
+      pageBuilder: (BuildContext buildContext, Animation<double> animation, Animation<double> secondaryAnimation) {
+        return SafeArea(
+          child: Builder(
+            builder: (BuildContext context) {
+              return Scaffold(
+                backgroundColor: Colors.transparent,
+                body: new GestureDetector(
+                  onTap: (){
+                    Navigator.pop(context);
+                  },
+                  child: new Container(
+                    width: MediaQuery.of(context).size.width,
+                    height: MediaQuery.of(context).size.height,
+                    color: Colors.transparent,
+                    alignment: Alignment.bottomCenter,
+                    child: Container(
+                      color: widget.bgColor,
+                      padding: EdgeInsets.only(left: 10.0, right: 10.0),
+                      width: MediaQuery.of(context).size.width,
+                      child: Row(
+                        children: <Widget>[
+                          widget.label == null ? Container(height: 0.0)
+                          : Container(
+                            width: widget.label.length * 15.0,
+                            child: Text(widget.label),
+                          ),
+                          Expanded(
+                            flex: 1,
+                            child: TextField(
+                              obscureText: widget.obscureText,
+                              keyboardType: widget.keyboardType,
+                              textAlign: widget.textAlign,
+                              maxLength: widget.maxLines,
+                              minLines: widget.minLines,
+                              decoration: InputDecoration(
+                                border: InputBorder.none
+                              ),
+                              autofocus: true,
+                              onChanged: (value) {
+                                if(widget.onChanged != null) widget.onChanged(value);
+                                _controller.text = value;
+                              },
+                              /// 处理输入过程中光标不后移的情况
+                              controller: TextEditingController.fromValue(
+                                TextEditingValue(
+                                  text: widget.value,
+                                  selection: TextSelection.fromPosition(
+                                    TextPosition(
+                                      affinity: TextAffinity.downstream,
+                                      offset: widget.value.length
+                                    )
+                                  )
+                                )
+                              ),
+                            ),
+                          )
+                        ],
+                      )
+                    )
+                  ),
+                ),
+              );
+            }
+          ),
+        );
+      },
+      barrierDismissible: true,
+      barrierLabel: MaterialLocalizations.of(context).modalBarrierDismissLabel,
+      barrierColor: null,
+      transitionDuration: const Duration(milliseconds: 150),
+      transitionBuilder: _buildMaterialDialogTransitions,
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    // MediaQueryData m = MediaQuery.of(context);
-    RenderBox renderBox = context.findRenderObject();
-    Offset offset = renderBox?.localToGlobal(Offset.zero);
-    print(showMask);
-
-    return new Stack(
-      alignment: FractionalOffset(0.0, 0.0),
-      // fit: StackFit.expand,
-      overflow: Overflow.visible,
-      children: <Widget>[
-        TextField(
+    return GestureDetector(
+      onTap: (){
+        inputDialog();
+      },
+      child: Container(
+        color: Colors.transparent,
+        child: TextField(
           key: widget.key,
           obscureText: widget.obscureText,
-          enabled: widget.enabled,
+          enabled: false,
           keyboardType: widget.keyboardType,
           textAlign: widget.textAlign,
           style: widget.style,
@@ -121,44 +187,9 @@ class _State extends State<MopTextField> {
           maxLength: widget.maxLines,
           minLines: widget.minLines,
           decoration: widget.decoration,
-          focusNode: focusNode,
-
-          /// 处理输入过程中光标不后移的情况
-          controller: TextEditingController.fromValue(
-            TextEditingValue(
-              text: widget.value,
-              selection: TextSelection.fromPosition(
-                TextPosition(
-                  affinity: TextAffinity.downstream,
-                  offset: widget.value.length
-                )
-              )
-            )
-          ),
-          onChanged: (value) {
-            if(widget.onChanged != null) widget.onChanged(value);
-          },
+          controller: _controller,
         ),
-
-        showMask
-        ? Positioned(
-          left: (offset?.dx ?? 0) * -1,
-          top: (offset?.dy ?? 0) * -1,
-          child: GestureDetector(
-            onTap: () {
-              FocusScope.of(context).requestFocus(FocusNode());
-              setState(() {
-                showMask = false;
-              });
-            },
-            child: Container(
-              width: MediaQuery.of(context).size.width,
-              height: MediaQuery.of(context).size.height,
-              color: Colors.red,
-            ),
-          ),
-        ) : Container()
-      ],
+      )
     );
   }
 }

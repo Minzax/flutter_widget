@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-
 import 'package:flutter_widget/widgets/mop_text_field.dart';
 
 void main() => runApp(MyApp());
@@ -36,6 +35,7 @@ class _MyAppState extends State<MyApp> {
                 )
               ),
               child: MopTextField(
+                bgColor: Color(0xFFDCE0E2),
                 value: inputValue,
                 onChanged: (value) {
                   setState(() {
@@ -43,22 +43,6 @@ class _MyAppState extends State<MyApp> {
                   });
                 },
               ),
-            ),
-            Container(
-              margin: EdgeInsets.all(50),
-              decoration: BoxDecoration(
-                border: Border.all(
-                  width: 1,
-                  color: Colors.black
-                )
-              ),
-              child: MopTextField(),
-            ),
-            RaisedButton(
-              child: Text('测试'),
-              onPressed: () {
-
-              },
             )
           ],
         ),
