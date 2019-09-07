@@ -1,9 +1,11 @@
-
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:flutter/widgets.dart';
+import 'package:keyboard_visibility/keyboard_visibility.dart';
 
+/// 输入框组件
 class MopTextField extends StatefulWidget {
+  /// 可全局配置默认悬浮输入框样式
+  static Decoration defalutInputDialogDecoration;
+
   /// 值
   final String value;
 
@@ -35,12 +37,6 @@ class MopTextField extends StatefulWidget {
 
   final int minLines;
 
-  /// 键盘输入框颜色
-  final Color bgColor;
-
-  // 键盘输入框 标题
-  final String label;
-
   final InputDecoration decoration;
 
   /// 聚焦事件
@@ -48,6 +44,9 @@ class MopTextField extends StatefulWidget {
 
   /// 失焦事件
   final void Function() onBlur;
+
+  /// 悬浮输入框样式
+  final Decoration inputDialogDecoration;
 
   MopTextField({
     this.key,
@@ -65,8 +64,7 @@ class MopTextField extends StatefulWidget {
     this.decoration,
     this.onFocus,
     this.onBlur,
-    this.label,
-    this.bgColor,
+    this.inputDialogDecoration
   });
 
   @override
@@ -74,23 +72,72 @@ class MopTextField extends StatefulWidget {
 }
 
 class _State extends State<MopTextField> {
-  bool obscureText = false;
-  bool focusEn = false;
-  bool showText = true;
+
+  FocusNode _focusNode = FocusNode();
 
   TextEditingController _controller = TextEditingController();
 
-  Widget _buildMaterialDialogTransitions(BuildContext context, Animation<double> animation, Animation<double> secondaryAnimation, Widget child) {
-  return FadeTransition(
-    opacity: CurvedAnimation(
-      parent: animation,
-      curve: Curves.easeOut,
-    ),
-    child: child,
-  );
-}
+  bool _dialogVisible;
 
-  void inputDialog(){
+  @override
+  void initState() {
+    /// 焦点侦听事件
+    _focusNode.addListener(() {
+      /// 聚焦状态
+      if(_focusNode.hasFocus) {
+        if(widget.onFocus != null) widget.onFocus();
+        /// 获取焦点时，弹窗悬浮输入框
+        showInputDialog();
+      } else {
+        if(widget.onBlur != null) widget.onBlur();
+      }
+    });
+
+    KeyboardVisibilityNotification().addNewListener(
+      onChange: (bool visible) {
+        if(!visible && _dialogVisible) {
+          closeInputDialog();
+        }
+      },
+    );
+    super.initState();
+  }
+
+  @override
+  void dispose() {
+    _focusNode.dispose();
+    _focusNode = null;
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return TextField(
+      key: widget.key,
+      obscureText: widget.obscureText,
+      enabled: widget.enabled,
+      keyboardType: widget.keyboardType,
+      textAlign: widget.textAlign,
+      style: widget.style,
+      autofocus: widget.autofocus,
+      readOnly: widget.readOnly,
+      maxLength: widget.maxLines,
+      minLines: widget.minLines,
+      decoration: widget.decoration,
+      focusNode: _focusNode,
+      controller: _controller,
+    );
+  }
+
+  /// 关闭对话框
+  void closeInputDialog() {
+    Navigator.pop(context);
+    _dialogVisible = false;
+  }
+
+  /// 展示对话框里头的输入框
+  void showInputDialog() {
+    _dialogVisible = true;
     showGeneralDialog(
       context: context,
       pageBuilder: (BuildContext buildContext, Animation<double> animation, Animation<double> secondaryAnimation) {
@@ -100,56 +147,47 @@ class _State extends State<MopTextField> {
               return Scaffold(
                 backgroundColor: Colors.transparent,
                 body: new GestureDetector(
-                  onTap: (){
-                    Navigator.pop(context);
-                  },
+                  onTap: closeInputDialog,
                   child: new Container(
                     width: MediaQuery.of(context).size.width,
                     height: MediaQuery.of(context).size.height,
                     color: Colors.transparent,
                     alignment: Alignment.bottomCenter,
                     child: Container(
-                      color: widget.bgColor,
                       padding: EdgeInsets.only(left: 10.0, right: 10.0),
                       width: MediaQuery.of(context).size.width,
-                      child: Row(
-                        children: <Widget>[
-                          widget.label == null ? Container(height: 0.0)
-                          : Container(
-                            width: widget.label.length * 15.0,
-                            child: Text(widget.label),
-                          ),
-                          Expanded(
-                            flex: 1,
-                            child: TextField(
-                              obscureText: widget.obscureText,
-                              keyboardType: widget.keyboardType,
-                              textAlign: widget.textAlign,
-                              maxLength: widget.maxLines,
-                              minLines: widget.minLines,
-                              decoration: InputDecoration(
-                                border: InputBorder.none
-                              ),
-                              autofocus: true,
-                              onChanged: (value) {
-                                if(widget.onChanged != null) widget.onChanged(value);
-                                _controller.text = value;
-                              },
-                              /// 处理输入过程中光标不后移的情况
-                              controller: TextEditingController.fromValue(
-                                TextEditingValue(
-                                  text: widget.value,
-                                  selection: TextSelection.fromPosition(
-                                    TextPosition(
-                                      affinity: TextAffinity.downstream,
-                                      offset: widget.value.length
-                                    )
-                                  )
-                                )
-                              ),
-                            ),
+                      decoration: widget.inputDialogDecoration ?? MopTextField.defalutInputDialogDecoration ?? BoxDecoration(
+                        border: Border.all(
+                          width: 1,
+                          color: Colors.black12
+                        )
+                      ),
+                      child: TextField(
+                        obscureText: widget.obscureText,
+                        keyboardType: widget.keyboardType,
+                        textAlign: widget.textAlign,
+                        maxLength: widget.maxLines,
+                        minLines: widget.minLines,
+                        decoration: InputDecoration(
+                          border: InputBorder.none
+                        ),
+                        autofocus: true,
+                        onChanged: (value) {
+                          if(widget.onChanged != null) widget.onChanged(value);
+                          _controller.text = value;
+                        },
+                        /// 处理输入过程中光标不后移的情况
+                        controller: TextEditingController.fromValue(
+                          TextEditingValue(
+                            text: widget.value,
+                            selection: TextSelection.fromPosition(
+                              TextPosition(
+                                affinity: TextAffinity.downstream,
+                                offset: widget.value.length
+                              )
+                            )
                           )
-                        ],
+                        ),
                       )
                     )
                   ),
@@ -166,30 +204,14 @@ class _State extends State<MopTextField> {
       transitionBuilder: _buildMaterialDialogTransitions,
     );
   }
+}
 
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: (){
-        inputDialog();
-      },
-      child: Container(
-        color: Colors.transparent,
-        child: TextField(
-          key: widget.key,
-          obscureText: widget.obscureText,
-          enabled: false,
-          keyboardType: widget.keyboardType,
-          textAlign: widget.textAlign,
-          style: widget.style,
-          autofocus: widget.autofocus,
-          readOnly: widget.readOnly,
-          maxLength: widget.maxLines,
-          minLines: widget.minLines,
-          decoration: widget.decoration,
-          controller: _controller,
-        ),
-      )
-    );
-  }
+Widget _buildMaterialDialogTransitions(BuildContext context, Animation<double> animation, Animation<double> secondaryAnimation, Widget child) {
+  return FadeTransition(
+    opacity: CurvedAnimation(
+      parent: animation,
+      curve: Curves.easeOut,
+    ),
+    child: child,
+  );
 }

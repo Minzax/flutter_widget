@@ -35,7 +35,24 @@ class _MyAppState extends State<MyApp> {
                 )
               ),
               child: MopTextField(
-                bgColor: Color(0xFFDCE0E2),
+                value: inputValue,
+                onChanged: (value) {
+                  setState(() {
+                    inputValue = value;
+                  });
+                },
+              ),
+            ),
+
+            Container(
+              margin: EdgeInsets.all(50),
+              decoration: BoxDecoration(
+                border: Border.all(
+                  width: 1,
+                  color: Colors.black
+                )
+              ),
+              child: MopTextField(
                 value: inputValue,
                 onChanged: (value) {
                   setState(() {
